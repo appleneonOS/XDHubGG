@@ -1,6 +1,13 @@
--- Load Rayfield
+-- Load Rayfield Safely
 print("Loading Rayfield...")
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local success, Rayfield = pcall(function()
+    return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+end)
+
+if not success or not Rayfield then
+    warn("Failed to load Rayfield UI library.")
+    return
+end
 print("Rayfield loaded.")
 
 -- Create Window
@@ -50,17 +57,13 @@ print("Globals set.")
 
 -- ============ HELPER FUNCTIONS ============
 
--- Check if NPC is an Anomaly
 local function isNpcAnomaly(npc)
+    if not npc then return false end
     local isFake = npc:GetAttribute("Fake")
-    if isFake == true or isFake == "true" then
-        return true
-    end
+    if isFake == true or isFake == "true" then return true end
 
     local isSkinwalker = npc:GetAttribute("Skinwalker")
-    if isSkinwalker == true or isSkinwalker == "true" then
-        return true
-    end
+    if isSkinwalker == true or isSkinwalker == "true" then return true end
 
     if CollectionService:HasTag(npc, "Skinwalker") or 
        CollectionService:HasTag(npc, "SkinwalkerMonster") or 
@@ -76,12 +79,10 @@ local function isNpcAnomaly(npc)
     return false
 end
 
--- Check if NPC is a Patient
 local function isNpcPatient(npc)
+    if not npc then return false end
     local isPatient = npc:GetAttribute("IsPatient")
-    if isPatient == true or isPatient == "true" then
-        return true
-    end
+    if isPatient == true or isPatient == "true" then return true end
 
     if CollectionService:HasTag(npc, "ActivePatient") then
         return true
@@ -95,14 +96,10 @@ print("Helper functions defined.")
 
 local function clearESP()
     for _, obj in ipairs(Highlights) do
-        if obj and obj.Parent then
-            obj:Destroy()
-        end
+        if obj and obj.Parent then pcall(function() obj:Destroy() end) end
     end
     for _, obj in ipairs(BillboardGuis) do
-        if obj and obj.Parent then
-            obj:Destroy()
-        end
+        if obj and obj.Parent then pcall(function() obj:Destroy() end) end
     end
     Highlights = {}
     BillboardGuis = {}
@@ -159,7 +156,7 @@ local function updateESP()
                         color = Color3.fromRGB(0, 255, 127)
                         labelText = "[Patient] " .. npc.Name
                     else
-                        goto continue
+                        continue
                     end
 
                     if treated == true or treated == "true" then
@@ -198,13 +195,20 @@ local function updateESP()
 
                     bill.Parent = npc.HumanoidRootPart
                     table.insert(BillboardGuis, bill)
-
-                    ::continue::
                 end
             end
         end
     end
 end
+
+-- Refresh ESP loop when toggled on
+task.spawn(function()
+    while task.wait(3) do
+        if ScriptActive and (Toggles.RoomESP or Toggles.NpcESP) then
+            pcall(updateESP)
+        end
+    end
+end)
 print("ESP functions defined.")
 
 -- ============ MAIN TAB ============
@@ -218,18 +222,23 @@ local function setupHeartbeatListener()
         heartbeatConnection = nil
     end
 
-    if not Toggles.AutoHeartbeat then
-        return
-    end
+    if not Toggles.AutoHeartbeat then return end
 
-    -- NO PCALL – if these objects don't exist, error will show
-    local heartbeatEvent = Net:WaitForChild("RE/StartHeartbeatMinigame")
-    local completeEvent = Net:WaitForChild("RE/HeartbeatMinigameComplete")
+    -- Safe retrieval using pcall and checks instead of script breaking loops
+    task.spawn(function()
+        local reFolder = Net:FindFirstChild("RE")
+        if not reFolder then return end
+        
+        local heartbeatEvent = reFolder:FindFirstChild("StartHeartbeatMinigame")
+        local completeEvent = reFolder:FindFirstChild("HeartbeatMinigameComplete")
 
-    heartbeatConnection = heartbeatEvent.OnClientEvent:Connect(function()
-        if Toggles.AutoHeartbeat and ScriptActive then
-            task.wait(0.2)
-            completeEvent:FireServer(true, true)
+        if heartbeatEvent and completeEvent then
+            heartbeatConnection = heartbeatEvent.OnClientEvent:Connect(function()
+                if Toggles.AutoHeartbeat and ScriptActive then
+                    task.wait(0.2)
+                    completeEvent:FireServer(true, true)
+                end
+            end)
         end
     end)
 end
@@ -306,14 +315,14 @@ MainTab:CreateToggle({
     end
 })
 
--- ---- Feature 3: ESP ----
+-- ---- Feature 3: ESP Toggles ----
 MainTab:CreateToggle({
     Name = "Room ESP",
     CurrentValue = false,
     Flag = "RoomESP",
     Callback = function(Value)
         Toggles.RoomESP = Value
-        updateESP()
+        if not Value then clearESP() else updateESP() end
     end
 })
 
@@ -323,7 +332,7 @@ MainTab:CreateToggle({
     Flag = "NpcESP",
     Callback = function(Value)
         Toggles.NpcESP = Value
-        updateESP()
+        if not Value then clearESP() else updateESP() end
     end
 })
 
@@ -336,23 +345,24 @@ local function setupSanity()
         sanityConnection = nil
     end
 
-    if not Toggles.InfSanity then
-        return
-    end
+    if not Toggles.InfSanity then return end
 
-    -- Set sanity to 100 immediately
-    if LocalPlayer and LocalPlayer:GetAttribute("Sanity") then
-        LocalPlayer:SetAttribute("Sanity", 100)
-    end
-
-    sanityConnection = LocalPlayer:GetAttributeChangedSignal("Sanity"):Connect(function()
-        if Toggles.InfSanity and ScriptActive then
-            local currentSanity = LocalPlayer:GetAttribute("Sanity")
-            if currentSanity and currentSanity < 100 then
+    if LocalPlayer then
+        pcall(function()
+            if LocalPlayer:GetAttribute("Sanity") then
                 LocalPlayer:SetAttribute("Sanity", 100)
             end
-        end
-    end)
+        end)
+
+        sanityConnection = LocalPlayer:GetAttributeChangedSignal("Sanity"):Connect(function()
+            if Toggles.InfSanity and ScriptActive then
+                local currentSanity = LocalPlayer:GetAttribute("Sanity")
+                if currentSanity and currentSanity < 100 then
+                    LocalPlayer:SetAttribute("Sanity", 100)
+                end
+            end
+        end)
+    end
 end
 
 MainTab:CreateToggle({
@@ -362,19 +372,11 @@ MainTab:CreateToggle({
     Callback = function(Value)
         Toggles.InfSanity = Value
         setupSanity()
-        if Value then
-            Rayfield:Notify({
-                Title = "Infinite Sanity",
-                Content = "Sanity locked at 100",
-                Duration = 2
-            })
-        else
-            Rayfield:Notify({
-                Title = "Infinite Sanity",
-                Content = "Disabled",
-                Duration = 2
-            })
-        end
+        Rayfield:Notify({
+            Title = "Infinite Sanity",
+            Content = Value and "Sanity locked at 100" or "Disabled",
+            Duration = 2
+        })
     end
 })
 
@@ -393,33 +395,37 @@ VisualTab:CreateButton({
             return
         end
 
-        -- NO PCALL – errors will show
+        local function applyHighlight(v)
+            if not v:IsA("Model") then return end
+            local h = Instance.new("Highlight")
+            -- Fixed Color3 setup from .new to .fromRGB
+            if v:GetAttribute("HasCameraEffect") or v:GetAttribute("Skinwalker") or v:GetAttribute("CameraEffect") then
+                h.FillColor = Color3.fromRGB(255, 0, 0)
+            else
+                h.FillColor = Color3.fromRGB(0, 255, 0)
+            end
+            h.Parent = v
+            h.Adornee = v
+        end
+
         local function startAnomalySensor()
-            local npcs = workspace.NPCs:GetChildren()
-            for i, v in ipairs(npcs) do
-                local h = Instance.new("Highlight")
-                if v:GetAttribute("HasCameraEffect") or v:GetAttribute("Skinwalker") or v:GetAttribute("CameraEffect") then
-                    h.FillColor = Color3.new(255, 0, 0)
-                else
-                    h.FillColor = Color3.new(0, 255, 0)
-                end
-                h.Parent = v
-                h.Adornee = v
+            local npcsFolder = workspace:FindFirstChild("NPCs")
+            if not npcsFolder then 
+                warn("NPCs folder not found in workspace yet.")
+                return 
             end
 
-            workspace.NPCs.ChildAdded:Connect(function(instance)
-                local h = Instance.new("Highlight")
-                if instance:GetAttribute("HasCameraEffect") or instance:GetAttribute("Skinwalker") or instance:GetAttribute("CameraEffect") then
-                    h.FillColor = Color3.new(255, 0, 0)
-                else
-                    h.FillColor = Color3.new(0, 255, 0)
-                end
-                h.Parent = instance
-                h.Adornee = instance
+            for _, v in ipairs(npcsFolder:GetChildren()) do
+                pcall(applyHighlight, v)
+            end
+
+            npcsFolder.ChildAdded:Connect(function(instance)
+                task.wait(0.1) -- give attributes time to replicate
+                pcall(applyHighlight, instance)
             end)
         end
 
-        startAnomalySensor()  -- no pcall
+        pcall(startAnomalySensor)
         anomalyExecuted = true
 
         Rayfield:Notify({
