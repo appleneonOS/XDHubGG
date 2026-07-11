@@ -1,16 +1,10 @@
--- Load Rayfield
-print("Loading Rayfield...")
+-- Wrap inside a protected call to load the Rayfield UI Library safely
 local success, Rayfield = pcall(function()
     return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 end)
+if not success or not Rayfield then return end
 
-if not success or not Rayfield then
-    warn("Failed to load Rayfield UI library.")
-    return
-end
-print("Rayfield loaded.")
-
--- Create Window
+-- Create main UI Window
 local Window = Rayfield:CreateWindow({
     Name = "XDHub - Animal Hospital",
     Icon = 0,
@@ -23,25 +17,22 @@ local Window = Rayfield:CreateWindow({
         FileName = "XDHub_AnimalHospital"
     },
     KeySystem = false,
-    Discord = { Enabled = false }
+    Discord = {
+        Enabled = false
+    }
 })
-print("Window created.")
 
--- ============ TABS ============
+-- UI Tabs
 local MainTab = Window:CreateTab("Main", nil)
 local VisualTab = Window:CreateTab("Visual", nil)
-print("Tabs created.")
 
--- ============ SERVICES ============
-local Net = game:GetService("ReplicatedStorage")
+-- Services & Local Player
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local CollectionService = game:GetService("CollectionService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-print("Services obtained.")
+local LocalPlayer = game:GetService("Players").LocalPlayer
 
--- ============ GLOBALS ============
+-- Script States & Configuration
 local ScriptActive = true
 local Toggles = {
     AutoHeartbeat = false,
@@ -55,56 +46,67 @@ local Toggles = {
     InfSanity = false
 }
 
--- ESP storage
-local Highlights = {}
-local BillboardGuis = {}
-print("Globals set.")
+local ActiveHighlights = {}
+local ActiveBillboards = {}
 
--- ============ HELPER FUNCTIONS ============
+-- Connections
+local HeartbeatConnection = nil
+local ProcessConnection = nil
+local TrashConnection = nil
+local CoffeeConnection = nil
+local DoorConnection = nil
+local SanityConnection = nil
 
-local function isNpcAnomaly(npc)
+-- Filter Strings for Proximity Prompts
+local ProcessKeywords = {"Stamp Forms", "Form", "Take Photo", "Register", "Badge", "Take", "Talk"}
+
+-- Helper: Check if an entity is an Anomaly
+local function isAnomaly(npc)
     if not npc then return false end
-    local isFake = npc:GetAttribute("Fake")
-    if isFake == true or isFake == "true" then return true end
-    local isSkinwalker = npc:GetAttribute("Skinwalker")
-    if isSkinwalker == true or isSkinwalker == "true" then return true end
+    
+    if npc:GetAttribute("Fake") == true or npc:GetAttribute("Fake") == "true" then return true end
+    if npc:GetAttribute("Skinwalker") == true or npc:GetAttribute("Skinwalker") == "true" then return true end
+    
     if CollectionService:HasTag(npc, "Skinwalker") or 
        CollectionService:HasTag(npc, "SkinwalkerMonster") or 
-       CollectionService:HasTag(npc, "GhostAnomaly") then
-        return true
+       CollectionService:HasTag(npc, "GhostAnomaly") then 
+        return true 
     end
-    local lowerName = npc.Name:lower()
-    if lowerName:find("monster") or lowerName:find("ghost") or lowerName:find("anomaly") then
-        return true
+    
+    local nameLower = npc.Name:lower()
+    if nameLower:find("monster") or nameLower:find("ghost") or nameLower:find("anomaly") then 
+        return true 
     end
+    
     return false
 end
 
-local function isNpcPatient(npc)
+-- Helper: Check if an entity is a Patient
+local function isPatient(npc)
     if not npc then return false end
-    local isPatient = npc:GetAttribute("IsPatient")
-    if isPatient == true or isPatient == "true" then return true end
+    if npc:GetAttribute("IsPatient") == true or npc:GetAttribute("IsPatient") == "true" then return true end
     if CollectionService:HasTag(npc, "ActivePatient") then return true end
     return false
 end
-print("Helper functions defined.")
 
--- ============ ESP FUNCTIONS ============
+-- Clear Visuals (ESP elements)
 local function clearESP()
-    for _, obj in ipairs(Highlights) do
-        if obj and obj.Parent then pcall(function() obj:Destroy() end) end
+    for _, visual in ipairs(ActiveHighlights) do
+        if visual and visual.Parent then pcall(function() visual:Destroy() end) end
     end
-    for _, obj in ipairs(BillboardGuis) do
-        if obj and obj.Parent then pcall(function() obj:Destroy() end) end
+    for _, visual in ipairs(ActiveBillboards) do
+        if visual and visual.Parent then pcall(function() visual:Destroy() end) end
     end
-    Highlights = {}
-    BillboardGuis = {}
+    ActiveHighlights = {}
+    ActiveBillboards = {}
 end
 
+-- Render Room and NPC ESP
 local function updateESP()
     clearESP()
     if not ScriptActive then return end
-
+    
+    -- Room ESP Section
     if Toggles.RoomESP then
         local rooms = workspace:FindFirstChild("Rooms")
         local medical = rooms and rooms:FindFirstChild("Medical")
@@ -112,87 +114,93 @@ local function updateESP()
             for _, room in ipairs(medical:GetChildren()) do
                 local minigame = room:FindFirstChild("Minigame")
                 if minigame then
-                    for _, model in ipairs(minigame:GetChildren()) do
-                        if model:IsA("Model") and (model.Name == "Monitor" or model.Name == "Bed" or model.Name == "Analyzer") then
-                            local hl = Instance.new("Highlight")
-                            hl.Name = "Shellae_RoomESP"
-                            hl.FillColor = Color3.fromRGB(0, 180, 255)
-                            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                            hl.FillTransparency = 0.6
-                            hl.OutlineTransparency = 0.2
-                            hl.Adornee = model
-                            hl.Parent = model
-                            table.insert(Highlights, hl)
+                    for _, object in ipairs(minigame:GetChildren()) do
+                        if object:IsA("Model") and (object.Name == "Monitor" or object.Name == "Bed" or object.Name == "Analyzer") then
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = "Shellae_RoomESP"
+                            highlight.FillColor = Color3.fromRGB(0, 180, 255)
+                            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            highlight.FillTransparency = 0.6
+                            highlight.OutlineTransparency = 0.2
+                            highlight.Adornee = object
+                            highlight.Parent = object
+                            table.insert(ActiveHighlights, highlight)
                         end
                     end
                 end
             end
         end
     end
-
+    
+    -- NPC ESP Section
     if Toggles.NpcESP then
-        local npcs = workspace:FindFirstChild("NPCs")
-        if npcs then
-            for _, npc in ipairs(npcs:GetChildren()) do
+        local npcsFolder = workspace:FindFirstChild("NPCs")
+        if npcsFolder then
+            for _, npc in ipairs(npcsFolder:GetChildren()) do
                 if npc:IsA("Model") and npc:FindFirstChild("HumanoidRootPart") then
-                    local isAnomaly = isNpcAnomaly(npc)
-                    local isPatient = isNpcPatient(npc)
-                    local room = npc:GetAttribute("DesignatedRoom") or "Lobby"
-                    local treated = npc:GetAttribute("Treated") or npc:GetAttribute("IsCured")
-                    local color, labelText
+                    local flagAnomaly = isAnomaly(npc)
+                    local flagPatient = isPatient(npc)
+                    local roomName = npc:GetAttribute("DesignatedRoom") or "Lobby"
+                    local isCured = npc:GetAttribute("Treated") or npc:GetAttribute("IsCured")
                     
-                    if isAnomaly then
-                        color = Color3.fromRGB(255, 30, 30)
+                    local fillHex = nil
+                    local labelText = ""
+                    
+                    if flagAnomaly then
+                        fillHex = Color3.fromRGB(255, 30, 30)
                         labelText = "⚠️ [ANOMALY] " .. npc.Name
-                    elseif isPatient then
-                        color = Color3.fromRGB(0, 255, 127)
+                    elseif flagPatient then
+                        fillHex = Color3.fromRGB(0, 255, 127)
                         labelText = "[Patient] " .. npc.Name
-                    else
-                        continue -- Native Luau skip item
                     end
-
-                    if treated == true or treated == "true" then
-                        labelText = labelText .. " (Treated)"
-                    else
-                        labelText = labelText .. " (Room: " .. tostring(room) .. ")"
+                    
+                    if fillHex then
+                        if isCured == true or isCured == "true" then
+                            labelText = labelText .. " (Treated)"
+                        else
+                            labelText = labelText .. " (Room: " .. tostring(roomName) .. ")"
+                        end
+                        
+                        -- ESP Outline
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "Shellae_NpcESP"
+                        highlight.FillColor = fillHex
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlight.FillTransparency = 0.4
+                        highlight.OutlineTransparency = 0.1
+                        highlight.Adornee = npc
+                        highlight.Parent = npc
+                        table.insert(ActiveHighlights, highlight)
+                        
+                        -- Overhead Name tag
+                        local billboard = Instance.new("BillboardGui")
+                        billboard.Name = "Shellae_Billboard"
+                        billboard.Adornee = npc:FindFirstChild("Head") or npc.HumanoidRootPart
+                        billboard.Size = UDim2.new(0, 200, 0, 50)
+                        billboard.AlwaysOnTop = true
+                        billboard.StudsOffset = Vector3.new(0, 3, 0)
+                        
+                        local label = Instance.new("TextLabel")
+                        label.Size = UDim2.new(1, 0, 1, 0)
+                        label.BackgroundTransparency = 1
+                        label.Text = labelText
+                        label.TextColor3 = fillHex
+                        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                        label.TextStrokeTransparency = 0
+                        label.Font = Enum.Font.GothamBold
+                        label.TextSize = 12
+                        label.Parent = billboard
+                        
+                        billboard.Parent = npc.HumanoidRootPart
+                        table.insert(ActiveBillboards, billboard)
                     end
-
-                    local hl = Instance.new("Highlight")
-                    hl.Name = "Shellae_NpcESP"
-                    hl.FillColor = color
-                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    hl.FillTransparency = 0.4
-                    hl.OutlineTransparency = 0.1
-                    hl.Adornee = npc
-                    hl.Parent = npc
-                    table.insert(Highlights, hl)
-
-                    local bill = Instance.new("BillboardGui")
-                    bill.Name = "Shellae_Billboard"
-                    bill.Adornee = npc:FindFirstChild("Head") or npc.HumanoidRootPart
-                    bill.Size = UDim2.new(0, 200, 0, 50)
-                    bill.AlwaysOnTop = true
-                    bill.StudsOffset = Vector3.new(0, 3, 0)
-
-                    local textLabel = Instance.new("TextLabel")
-                    textLabel.Size = UDim2.new(1, 0, 1, 0)
-                    textLabel.BackgroundTransparency = 1
-                    textLabel.Text = labelText
-                    textLabel.TextColor3 = color
-                    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                    textLabel.TextStrokeTransparency = 0
-                    textLabel.Font = Enum.Font.GothamBold
-                    textLabel.TextSize = 12
-                    textLabel.Parent = bill
-                    bill.Parent = npc.HumanoidRootPart
-                    table.insert(BillboardGuis, bill)
                 end
             end
         end
     end
 end
 
--- Dedicated slow loop to refresh active ESP targets safely
+-- Refresh ESP Loop
 task.spawn(function()
     while task.wait(3) do
         if ScriptActive and (Toggles.RoomESP or Toggles.NpcESP) then
@@ -200,25 +208,20 @@ task.spawn(function()
         end
     end
 end)
-print("ESP functions defined.")
 
--- ============ FEATURE: AUTO HEARTBEAT ============
-local heartbeatConnection = nil
-local function setupHeartbeatListener()
-    if heartbeatConnection then
-        heartbeatConnection:Disconnect()
-        heartbeatConnection = nil
-    end
+-- Feature: Auto Heartbeat Minigame
+local function setupAutoHeartbeat()
+    if HeartbeatConnection then HeartbeatConnection:Disconnect() HeartbeatConnection = nil end
     if not Toggles.AutoHeartbeat then return end
     
     task.spawn(function()
-        local reFolder = Net:WaitForChild("RE", 5)
-        if not reFolder then return end
-        local heartbeatEvent = reFolder:WaitForChild("StartHeartbeatMinigame", 5)
-        local completeEvent = reFolder:WaitForChild("HeartbeatMinigameComplete", 5)
+        local re = ReplicatedStorage:WaitForChild("RE", 5)
+        if not re then return end
+        local startEvent = re:WaitForChild("StartHeartbeatMinigame", 5)
+        local completeEvent = re:WaitForChild("HeartbeatMinigameComplete", 5)
         
-        if heartbeatEvent and completeEvent then
-            heartbeatConnection = heartbeatEvent.OnClientEvent:Connect(function()
+        if startEvent and completeEvent then
+            HeartbeatConnection = startEvent.OnClientEvent:Connect(function()
                 if Toggles.AutoHeartbeat and ScriptActive then
                     task.wait(0.2)
                     completeEvent:FireServer(true, true)
@@ -232,21 +235,18 @@ MainTab:CreateToggle({
     Name = "Auto Heartbeat Minigame",
     CurrentValue = false,
     Flag = "AutoHeartbeat",
-    Callback = function(Value)
-        Toggles.AutoHeartbeat = Value
-        setupHeartbeatListener()
+    Callback = function(value)
+        Toggles.AutoHeartbeat = value
+        setupAutoHeartbeat()
     end
 })
 
--- ============ FEATURE: AUTO PROCESS ============
-local processKeywords = {"Stamp", "Form", "Photo", "Register", "Badge", "Take", "Talk"}
-local processConnection = nil
-
+-- Feature: Auto Process
 local function shouldAutoProcess(prompt)
-    local name = prompt.Name:lower()
-    local parentName = prompt.Parent and prompt.Parent.Name:lower() or ""
-    for _, keyword in ipairs(processKeywords) do
-        if name:find(keyword:lower()) or parentName:find(keyword:lower()) then
+    local nameLower = prompt.Name:lower()
+    local parentLower = prompt.Parent and prompt.Parent.Name:lower() or ""
+    for _, keyword in ipairs(ProcessKeywords) do
+        if nameLower:find(keyword:lower()) or parentLower:find(keyword:lower()) then
             return true
         end
     end
@@ -254,59 +254,53 @@ local function shouldAutoProcess(prompt)
 end
 
 local function setupAutoProcess()
-    if processConnection then
-        processConnection:Disconnect()
-        processConnection = nil
-    end
+    if ProcessConnection then ProcessConnection:Disconnect() ProcessConnection = nil end
     if not Toggles.AutoProcess then return end
-
-    processConnection = ProximityPromptService.PromptShown:Connect(function(prompt)
+    
+    -- Optimized: Event listener triggers only when prompts appear nearby
+    ProcessConnection = ProximityPromptService.PromptShown:Connect(function(prompt)
         if not Toggles.AutoProcess or not ScriptActive then return end
         if shouldAutoProcess(prompt) then
+            prompt.MaxActivationDistance = 50
             prompt.HoldDuration = 0
             fireproximityprompt(prompt)
         end
     end)
-
-    for _, prompt in ipairs(workspace:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") and shouldAutoProcess(prompt) then
-            prompt.HoldDuration = 0
-            fireproximityprompt(prompt)
-        end
-    end
 end
 
 MainTab:CreateToggle({
     Name = "Auto Process (Stamp, Photo, Register, etc.)",
     CurrentValue = false,
     Flag = "AutoProcess",
-    Callback = function(Value)
-        Toggles.AutoProcess = Value
+    Callback = function(value)
+        Toggles.AutoProcess = value
         setupAutoProcess()
         Rayfield:Notify({
             Title = "Auto Process",
-            Content = Value and "Enabled" or "Disabled",
+            Content = value and "Enabled" or "Disabled",
             Duration = 2
         })
     end
 })
 
--- ============ FEATURE: AUTO TREAT ============
-local function getTVMedicine()
+-- Feature: Auto Treat (Full Sequence)
+local function getTvScreenText()
     if not LocalPlayer then return nil end
     local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
     if playerGui then
         local tvScreen = playerGui:FindFirstChild("TVScreen")
         if tvScreen then
-            local textLabel = tvScreen:FindFirstChild("MedicineText")
-            if textLabel and textLabel:IsA("TextLabel") then
-                return textLabel.Text
+            local medicineText = tvScreen:FindFirstChild("MedicineText")
+            if medicineText and medicineText:IsA("TextLabel") then
+                return medicineText.Text
             end
         end
     end
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("SurfaceGui") and obj.Name:find("TV") then
-            for _, child in ipairs(obj:GetChildren()) do
+    
+    -- Fallback map scan for TV SurfaceGuis
+    for _, object in ipairs(workspace:GetDescendants()) do
+        if object:IsA("SurfaceGui") and object.Name:find("TV") then
+            for _, child in ipairs(object:GetChildren()) do
                 if child:IsA("TextLabel") then
                     return child.Text
                 end
@@ -320,35 +314,36 @@ local function applyMedicine(medicineName)
     print("Applying medicine:", medicineName)
 end
 
-local function interactWithMachine(machineName)
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("ProximityPrompt") and obj.Name:find(machineName) then
-            fireproximityprompt(obj)
+local function triggerPromptByName(targetName)
+    for _, object in ipairs(workspace:GetDescendants()) do
+        if object:IsA("ProximityPrompt") and object.Name:find(targetName) then
+            fireproximityprompt(object)
             return true
         end
     end
     return false
 end
 
-local function performTreatment()
+local function runTreatSequence()
     if not Toggles.AutoTreat or not ScriptActive then return end
-    interactWithMachine("DNA") or interactWithMachine("Sampler")
+    
+    local step1 = triggerPromptByName("DNA") or triggerPromptByName("Sampler")
     task.wait(0.5)
-    interactWithMachine("Analyzer") or interactWithMachine("Analyze")
+    local step2 = triggerPromptByName("Analyzer") or triggerPromptByName("Analyze")
     task.wait(0.5)
-    interactWithMachine("Process") or interactWithMachine("Result")
+    local step3 = triggerPromptByName("Process") or triggerPromptByName("Result")
     task.wait(0.5)
-    local medicine = getTVMedicine()
-    if medicine then
-        applyMedicine(medicine)
+    
+    local diagnosisText = getTvScreenText()
+    if diagnosisText then
+        applyMedicine(diagnosisText)
     end
 end
 
--- Safe execution loop running every 1 second instead of dropping frames on Heartbeat
 task.spawn(function()
     while task.wait(1) do
         if Toggles.AutoTreat and ScriptActive then
-            pcall(performTreatment)
+            pcall(runTreatSequence)
         end
     end
 end)
@@ -357,28 +352,25 @@ MainTab:CreateToggle({
     Name = "Auto Treat (Full Sequence)",
     CurrentValue = false,
     Flag = "AutoTreat",
-    Callback = function(Value)
-        Toggles.AutoTreat = Value
+    Callback = function(value)
+        Toggles.AutoTreat = value
         Rayfield:Notify({
             Title = "Auto Treat",
-            Content = Value and "Enabled" or "Disabled",
+            Content = value and "Enabled" or "Disabled",
             Duration = 2
         })
     end
 })
 
--- ============ FEATURE: AUTO TRASH ============
-local trashConnection = nil
+-- Feature: Auto Trash
 local function setupAutoTrash()
-    if trashConnection then
-        trashConnection:Disconnect()
-        trashConnection = nil
-    end
+    if TrashConnection then TrashConnection:Disconnect() TrashConnection = nil end
     if not Toggles.AutoTrash then return end
-
-    trashConnection = ProximityPromptService.PromptShown:Connect(function(prompt)
+    
+    TrashConnection = ProximityPromptService.PromptShown:Connect(function(prompt)
         if not Toggles.AutoTrash or not ScriptActive then return end
         if prompt.Name:lower():find("trash") or (prompt.Parent and prompt.Parent.Name:lower():find("trash")) then
+            prompt.MaxActivationDistance = 50
             prompt.HoldDuration = 0
             fireproximityprompt(prompt)
         end
@@ -389,24 +381,22 @@ MainTab:CreateToggle({
     Name = "Auto Trash",
     CurrentValue = false,
     Flag = "AutoTrash",
-    Callback = function(Value)
-        Toggles.AutoTrash = Value
+    Callback = function(value)
+        Toggles.AutoTrash = value
         setupAutoTrash()
         Rayfield:Notify({
             Title = "Auto Trash",
-            Content = Value and "Enabled" or "Disabled",
+            Content = value and "Enabled" or "Disabled",
             Duration = 2
         })
     end
 })
 
--- ============ FEATURE: COFFEE AURA ============
-local coffeeConnection = nil
-
+-- Feature: Coffee Aura
 local function drinkCoffee()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("ProximityPrompt") and (obj.Name:lower():find("coffee") or (obj.Parent and obj.Parent.Name:lower():find("coffee"))) then
-            fireproximityprompt(obj)
+    for _, object in ipairs(workspace:GetDescendants()) do
+        if object:IsA("ProximityPrompt") and (object.Name:lower():find("coffee") or (object.Parent and object.Parent.Name:lower():find("coffee"))) then
+            fireproximityprompt(object)
             return true
         end
     end
@@ -414,23 +404,19 @@ local function drinkCoffee()
 end
 
 local function setupCoffeeAura()
-    if coffeeConnection then
-        coffeeConnection:Disconnect()
-        coffeeConnection = nil
-    end
+    if CoffeeConnection then CoffeeConnection:Disconnect() CoffeeConnection = nil end
     if not Toggles.CoffeeAura then return end
-
-    coffeeConnection = LocalPlayer:GetAttributeChangedSignal("Sanity"):Connect(function()
+    
+    CoffeeConnection = LocalPlayer:GetAttributeChangedSignal("Sanity"):Connect(function()
         if Toggles.CoffeeAura and ScriptActive then
-            local sanity = LocalPlayer:GetAttribute("Sanity")
-            if sanity and sanity < 80 then
+            local currentSanity = LocalPlayer:GetAttribute("Sanity")
+            if currentSanity and currentSanity < 80 then
                 drinkCoffee()
             end
         end
     end)
 end
 
--- Optimized loop checking every 1.5 seconds instead of spamming every frame
 task.spawn(function()
     while task.wait(1.5) do
         if Toggles.CoffeeAura and ScriptActive then
@@ -443,109 +429,100 @@ MainTab:CreateToggle({
     Name = "Coffee Aura (Auto Drink)",
     CurrentValue = false,
     Flag = "CoffeeAura",
-    Callback = function(Value)
-        Toggles.CoffeeAura = Value
+    Callback = function(value)
+        Toggles.CoffeeAura = value
         setupCoffeeAura()
         Rayfield:Notify({
             Title = "Coffee Aura",
-            Content = Value and "Enabled" or "Disabled",
+            Content = value and "Enabled" or "Disabled",
             Duration = 2
         })
     end
 })
 
--- ============ FEATURE: DOOR AURA ============
-local doorConnection = nil
-
+-- Feature: Door Aura
 local function isDoorPrompt(prompt)
-    local name = prompt.Name:lower()
-    local parentName = prompt.Parent and prompt.Parent.Name:lower() or ""
-    if name:find("door") or name:find("open") or name:find("close") or name:find("entry") or name:find("exit") then
+    local nameLower = prompt.Name:lower()
+    local parentLower = prompt.Parent and prompt.Parent.Name:lower() or ""
+    if nameLower:find("door") or nameLower:find("open") or nameLower:find("close") or nameLower:find("entry") or nameLower:find("exit") then
         return true
     end
-    if parentName:find("door") or parentName:find("entrance") or parentName:find("exit") then
+    if parentLower:find("door") or parentLower:find("entrance") or parentLower:find("exit") then
         return true
     end
     return false
 end
 
 local function setupDoorAura()
-    if doorConnection then
-        doorConnection:Disconnect()
-        doorConnection = nil
-    end
+    if DoorConnection then DoorConnection:Disconnect() DoorConnection = nil end
     if not Toggles.DoorAura then return end
-
-    doorConnection = ProximityPromptService.PromptShown:Connect(function(prompt)
+    
+    -- Optimized: Event listener opens doors instantly when stepping within proximity range
+    DoorConnection = ProximityPromptService.PromptShown:Connect(function(prompt)
         if not Toggles.DoorAura or not ScriptActive then return end
         if isDoorPrompt(prompt) then
+            prompt.MaxActivationDistance = 50
             prompt.HoldDuration = 0
             fireproximityprompt(prompt)
         end
     end)
-
-    for _, prompt in ipairs(workspace:GetDescendants()) do
-        if prompt:IsA("ProximityPrompt") and isDoorPrompt(prompt) then
-            prompt.HoldDuration = 0
-            fireproximityprompt(prompt)
-        end
-    end
 end
 
 MainTab:CreateToggle({
     Name = "Door Aura (Auto Open)",
     CurrentValue = false,
     Flag = "DoorAura",
-    Callback = function(Value)
-        Toggles.DoorAura = Value
+    Callback = function(value)
+        Toggles.DoorAura = value
         setupDoorAura()
         Rayfield:Notify({
             Title = "Door Aura",
-            Content = Value and "Enabled — doors will open automatically" or "Disabled",
+            Content = value and "Enabled — doors will open automatically" or "Disabled",
             Duration = 2
         })
     end
 })
 
--- ============ FEATURE: INFINITE SANITY ============
-local sanityConnection = nil
-local function setupSanity()
-    if sanityConnection then
-        sanityConnection:Disconnect()
-        sanityConnection = nil
-    end
+-- Feature: Infinite Sanity
+local function setupInfiniteSanity()
+    if SanityConnection then SanityConnection:Disconnect() SanityConnection = nil end
     if not Toggles.InfSanity then return end
-    if LocalPlayer and LocalPlayer:GetAttribute("Sanity") then
-        LocalPlayer:SetAttribute("Sanity", 100)
-    end
-    sanityConnection = LocalPlayer:GetAttributeChangedSignal("Sanity"):Connect(function()
-        if Toggles.InfSanity and ScriptActive then
-            local currentSanity = LocalPlayer:GetAttribute("Sanity")
-            if currentSanity and currentSanity < 100 then
+    
+    if LocalPlayer then
+        pcall(function()
+            if LocalPlayer:GetAttribute("Sanity") then
                 LocalPlayer:SetAttribute("Sanity", 100)
             end
-        end
-    end)
+        end)
+        SanityConnection = LocalPlayer:GetAttributeChangedSignal("Sanity"):Connect(function()
+            if Toggles.InfSanity and ScriptActive then
+                local currentSanity = LocalPlayer:GetAttribute("Sanity")
+                if currentSanity and currentSanity < 100 then
+                    LocalPlayer:SetAttribute("Sanity", 100)
+                end
+            end
+        end)
+    end
 end
 
 MainTab:CreateToggle({
     Name = "Infinite Sanity",
     CurrentValue = false,
     Flag = "InfSanity",
-    Callback = function(Value)
-        Toggles.InfSanity = Value
-        setupSanity()
+    Callback = function(value)
+        Toggles.InfSanity = value
+        setupInfiniteSanity()
     end
 })
 
--- ============ FEATURE: ESP TOGGLES ============
+-- ESP Toggles
 MainTab:CreateToggle({
     Name = "Room ESP",
     CurrentValue = false,
     Flag = "RoomESP",
-    Callback = function(Value)
-        Toggles.RoomESP = Value
-        if not Value then clearESP() else updateESP() end
+    Callback = function(value)
+        Toggles.RoomESP = value
+        if not value then clearESP() else updateESP() end
     end
 })
 
@@ -553,18 +530,18 @@ MainTab:CreateToggle({
     Name = "NPC ESP",
     CurrentValue = false,
     Flag = "NpcESP",
-    Callback = function(Value)
-        Toggles.NpcESP = Value
-        if not Value then clearESP() else updateESP() end
+    Callback = function(value)
+        Toggles.NpcESP = value
+        if not value then clearESP() else updateESP() end
     end
 })
 
--- ============ VISUAL TAB ============
-local anomalyExecuted = false
+-- Feature: Static Anomaly Highlights (Visuals Tab Button)
+local anomalySensorActive = false
 VisualTab:CreateButton({
     Name = "Enable Anomaly Highlights",
     Callback = function()
-        if anomalyExecuted then
+        if anomalySensorActive then
             Rayfield:Notify({
                 Title = "Already Running",
                 Content = "Anomaly sensor is already active.",
@@ -573,33 +550,35 @@ VisualTab:CreateButton({
             return
         end
         
-        local function applyHighlight(v)
-            if not v:IsA("Model") then return end
-            local h = Instance.new("Highlight")
-            if v:GetAttribute("HasCameraEffect") or v:GetAttribute("Skinwalker") or v:GetAttribute("CameraEffect") then
-                h.FillColor = Color3.fromRGB(255, 0, 0)
+        local function applyHighlight(model)
+            if not model:IsA("Model") then return end
+            local highlight = Instance.new("Highlight")
+            
+            if model:GetAttribute("HasCameraEffect") or model:GetAttribute("Skinwalker") or model:GetAttribute("CameraEffect") then
+                highlight.FillColor = Color3.fromRGB(255, 0, 0) -- Red threat
             else
-                h.FillColor = Color3.fromRGB(0, 255, 0)
+                highlight.FillColor = Color3.fromRGB(0, 255, 0) -- Green safe
             end
-            h.Parent = v
-            h.Adornee = v
+            highlight.Parent = model
+            highlight.Adornee = model
         end
-
-        local function startAnomalySensor()
+        
+        local function initSensor()
             local npcsFolder = workspace:FindFirstChild("NPCs")
             if not npcsFolder then return end
             
-            for _, v in ipairs(npcsFolder:GetChildren()) do
-                pcall(applyHighlight, v)
+            for _, npc in ipairs(npcsFolder:GetChildren()) do
+                pcall(applyHighlight, npc)
             end
-            npcsFolder.ChildAdded:Connect(function(instance)
+            
+            npcsFolder.ChildAdded:Connect(function(newNpc)
                 task.wait(0.1)
-                pcall(applyHighlight, instance)
+                pcall(applyHighlight, newNpc)
             end)
         end
         
-        pcall(startAnomalySensor)
-        anomalyExecuted = true
+        pcall(initSensor)
+        anomalySensorActive = true
         Rayfield:Notify({
             Title = "Anomaly Sensor",
             Content = "Highlights activated! Red = threat, Green = safe.",
@@ -608,11 +587,8 @@ VisualTab:CreateButton({
     end
 })
 
--- ============ STARTUP NOTIFICATION ============
+-- Initialization Notification
 Rayfield:Notify({
     Title = "XDHub Loaded",
-    Content = "All toggles ready. Door Aura added!",
+    Content = "All toggles ready. Optimized event loops integrated!",
     Duration = 3
-})
-
-print("XDHub - Animal Hospital script execution finished.")
