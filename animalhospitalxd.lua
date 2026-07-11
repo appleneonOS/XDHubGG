@@ -1,5 +1,7 @@
 -- Load Rayfield
+print("Loading Rayfield...")
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+print("Rayfield loaded.")
 
 -- Create Window
 local Window = Rayfield:CreateWindow({
@@ -16,10 +18,12 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false,
     Discord = { Enabled = false }
 })
+print("Window created.")
 
 -- ============ TABS ============
 local MainTab = Window:CreateTab("Main", nil)
 local VisualTab = Window:CreateTab("Visual", nil)
+print("Tabs created.")
 
 -- ============ SERVICES ============
 local Net = game:GetService("ReplicatedStorage")
@@ -27,6 +31,7 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+print("Services obtained.")
 
 -- ============ GLOBALS ============
 local ScriptActive = true
@@ -41,6 +46,7 @@ local Toggles = {
 -- ESP storage
 local Highlights = {}
 local BillboardGuis = {}
+print("Globals set.")
 
 -- ============ HELPER FUNCTIONS ============
 
@@ -83,6 +89,7 @@ local function isNpcPatient(npc)
 
     return false
 end
+print("Helper functions defined.")
 
 -- ============ ESP FUNCTIONS ============
 
@@ -146,13 +153,12 @@ local function updateESP()
                     local labelText
 
                     if isAnomaly then
-                        color = Color3.fromRGB(255, 30, 30) -- Red for Anomaly
+                        color = Color3.fromRGB(255, 30, 30)
                         labelText = "⚠️ [ANOMALY] " .. npc.Name
                     elseif isPatient then
-                        color = Color3.fromRGB(0, 255, 127) -- Green for Real
+                        color = Color3.fromRGB(0, 255, 127)
                         labelText = "[Patient] " .. npc.Name
                     else
-                        -- Not a patient and not a known anomaly – skip
                         goto continue
                     end
 
@@ -162,7 +168,6 @@ local function updateESP()
                         labelText = labelText .. " (Room: " .. tostring(room) .. ")"
                     end
 
-                    -- Highlight Model
                     local hl = Instance.new("Highlight")
                     hl.Name = "Shellae_NpcESP"
                     hl.FillColor = color
@@ -173,7 +178,6 @@ local function updateESP()
                     hl.Parent = npc
                     table.insert(Highlights, hl)
 
-                    -- Overhead Label
                     local bill = Instance.new("BillboardGui")
                     bill.Name = "Shellae_Billboard"
                     bill.Adornee = npc:FindFirstChild("Head") or npc.HumanoidRootPart
@@ -201,6 +205,7 @@ local function updateESP()
         end
     end
 end
+print("ESP functions defined.")
 
 -- ============ MAIN TAB ============
 
@@ -217,16 +222,15 @@ local function setupHeartbeatListener()
         return
     end
 
-    pcall(function()
-        local heartbeatEvent = Net:WaitForChild("RE/StartHeartbeatMinigame")
-        local completeEvent = Net:WaitForChild("RE/HeartbeatMinigameComplete")
+    -- NO PCALL – if these objects don't exist, error will show
+    local heartbeatEvent = Net:WaitForChild("RE/StartHeartbeatMinigame")
+    local completeEvent = Net:WaitForChild("RE/HeartbeatMinigameComplete")
 
-        heartbeatConnection = heartbeatEvent.OnClientEvent:Connect(function()
-            if Toggles.AutoHeartbeat and ScriptActive then
-                task.wait(0.2)
-                completeEvent:FireServer(true, true)
-            end
-        end)
+    heartbeatConnection = heartbeatEvent.OnClientEvent:Connect(function()
+        if Toggles.AutoHeartbeat and ScriptActive then
+            task.wait(0.2)
+            completeEvent:FireServer(true, true)
+        end
     end)
 end
 
@@ -333,7 +337,6 @@ local function setupSanity()
     end
 
     if not Toggles.InfSanity then
-        -- Optionally, we could restore the sanity to its original value, but we'll leave it as is.
         return
     end
 
@@ -342,7 +345,6 @@ local function setupSanity()
         LocalPlayer:SetAttribute("Sanity", 100)
     end
 
-    -- Connect to the Sanity attribute change
     sanityConnection = LocalPlayer:GetAttributeChangedSignal("Sanity"):Connect(function()
         if Toggles.InfSanity and ScriptActive then
             local currentSanity = LocalPlayer:GetAttribute("Sanity")
@@ -391,6 +393,7 @@ VisualTab:CreateButton({
             return
         end
 
+        -- NO PCALL – errors will show
         local function startAnomalySensor()
             local npcs = workspace.NPCs:GetChildren()
             for i, v in ipairs(npcs) do
@@ -416,7 +419,7 @@ VisualTab:CreateButton({
             end)
         end
 
-        pcall(startAnomalySensor)
+        startAnomalySensor()  -- no pcall
         anomalyExecuted = true
 
         Rayfield:Notify({
@@ -433,3 +436,5 @@ Rayfield:Notify({
     Content = "Main: Heartbeat, Prompt, ESP, Sanity | Visual: Highlights",
     Duration = 3
 })
+
+print("XDHub - Animal Hospital script execution finished.")
