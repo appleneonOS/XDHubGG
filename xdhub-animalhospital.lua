@@ -1,1 +1,580 @@
-local R=loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()local P=game:GetService("Players")local W=game:GetService("Workspace")local RS=game:GetService("RunService")local RP=game:GetService("ReplicatedStorage")local p=P.LocalPlayer local C=workspace.CurrentCamera or workspace:WaitForChild("Camera")local CF={InstantAction=false,InfiniteSanity=false,ESPAnomaly=false,ESPPatient=false,ESPVisitor=false,AutoRoom6=false,AutoRoom7=false,AutoRoom8=false,AutoProcess=false,AutoFarm=false,AutoReject=false,AutoCheckIn=false,AutoBarneyCoffee=false,AutoTreat=false,NoClip=false,FarmDelay=1.5,WalkSpeed=16,}getgenv().Config=CF local IPC={}local CRT=0 local CD=3 local function RIC()IPC={}CRT=os.clock()for _,d in pairs(W:GetDescendants())do if d:IsA("ProximityPrompt")and d.Enabled and d.ActionText then IPC[string.lower(d.ActionText)]=d end end end local function GCIP(n)if not n or n==""then return nil end if os.clock()-CRT>CD then RIC()end local t=string.lower(n)for k,p in pairs(IPC)do if string.find(k,t)or string.find(t,k)then return p end end return nil end local function GC()return p.Character or p.CharacterAdded:Wait()end local function GH()local c=GC()return c and c:FindFirstChildOfClass("Humanoid")end local function GRP()local c=GC()return c and c:FindFirstChild("HumanoidRootPart")end local function FBPO(o)if not o then return nil end if o:IsA("BasePart")then return o end for _,c in pairs(o:GetChildren())do if c:IsA("BasePart")then return c end if c:IsA("Model")then local p=FBPO(c)if p then return p end end end return nil end local function ST(pos)local r=GRP()if not r then return end local np=pos+Vector3.new(0,2,0)local s,e=pcall(function()r.CFrame=CFrame.new(np)end)if s then RS.Heartbeat:Wait()r.Velocity=Vector3.new(0,0,0)local h=GH()if h then h:ChangeState(Enum.HumanoidStateType.Running)end end end local function LAP(tp)local r=GRP()if r and tp then pcall(function()r.CFrame=CFrame.lookAt(r.Position,tp)local c=GC()if c then local h=c:FindFirstChild("Head")if h then local cp=h.Position-(r.CFrame.LookVector*4)+Vector3.new(0,2,0)C.CFrame=CFrame.lookAt(cp,tp)end end end)end end local function FPD(pr)if not pr or not pr:IsA("ProximityPrompt")or not pr.Enabled then return false end local tp=FBPO(pr.Parent)if tp then LAP(tp.Position)end if CF.InstantAction then pr.HoldDuration=0 end local s=false local s1,e1=pcall(function()fireproximityprompt(pr)end)if s1 then s=true end if not s then local s2,e2=pcall(function()pr:InputHoldStart(p)task.wait(0.05)pr:InputHoldEnd(p)end)if s2 then s=true end end if not s then local s3,e3=pcall(function()local m=p:GetMouse()if m then local pt=FBPO(pr.Parent)if pt then m.Target=pt m.TargetClick:Fire()end end end)if s3 then s=true end end return s end local function FPWC(pr,tp)if not pr or not pr:IsA("ProximityPrompt")then return false end if tp then LAP(tp)end return FPD(pr)end local function CB(btn)if not btn then return false end local cd=btn:FindFirstChildOfClass("ClickDetector")if cd then LAP(btn.Position)local s,e=pcall(function()fireclickdetector(cd)end)if s then return true end end return false end local SC={}local function KSF()if not CF.InfiniteSanity then return end pcall(function()p:SetAttribute("Sanity",999)local L=RP:FindFirstChild("Lib")if L then local lib=require(L)if type(lib.Inject)=="function"then lib.Inject("PlayerLostSanity",function()p:SetAttribute("Sanity",999)end)end end end)end local function SIS()for _,c in pairs(SC)do pcall(function()c:Disconnect()end)end SC={}local c1=p:GetAttributeChangedSignal("Sanity"):Connect(function()KSF()end)table.insert(SC,c1)local c2=RS.Heartbeat:Connect(function()KSF()end)table.insert(SC,c2)KSF()end local function TIS()for _,c in pairs(SC)do pcall(function()c:Disconnect()end)end SC={}end task.spawn(function()local last=false while true do local cur=CF.InfiniteSanity if cur and not last then SIS()elseif not cur and last then TIS()end last=cur task.wait(0.5)end end)local NF="NPCs"local AN="Skinwalker"local PA="IsPatient"local VA="IsVisitor"local IF={StoryForced=true,AlwaysPatient=true}local HL={}local function GNF()return W:FindFirstChild(NF)end local function MHP(m)for _,d in pairs(m:GetDescendants())do if d:IsA("BasePart")then return true end end return false end local function GDV(m,n)local a=m:GetAttribute(n)if a~=nil then return a end local c=m:FindFirstChild(n)if c and c:IsA("ValueBase")then return c.Value end return nil end local function HD(m,n)if m:GetAttribute(n)~=nil then return true end if m:FindFirstChild(n)then return true end return false end local function FI(m)for f in pairs(IF)do if HD(m,f)then return true end end return false end local function IP(m)return GDV(m,PA)==true end local function IV(m)return typeof(GDV(m,VA))=="number"end local function IA(m)return m.Name==AN end local function SS(m)if FI(m)then return false end return IP(m)or IV(m)or IA(m)end local function RH(m)local h=HL[m]if h then h:Destroy()end HL[m]=nil end local function GHl(m)if HL[m]and HL[m].Parent then return HL[m]end local h=Instance.new("Highlight")h.Name="AnimalHospitalESP"h.Adornee=m h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop h.FillTransparency=0.45 h.OutlineTransparency=0 h.Parent=m HL[m]=h return h end local function SH(m,ty)local h=GHl(m)if ty=="anomaly"then h.FillColor=Color3.fromRGB(255,45,65)h.OutlineColor=Color3.fromRGB(255,0,25)elseif ty=="patient"then h.FillColor=Color3.fromRGB(55,255,120)h.OutlineColor=Color3.fromRGB(0,255,90)elseif ty=="visitor"then h.FillColor=Color3.fromRGB(100,200,255)h.OutlineColor=Color3.fromRGB(50,150,255)end end local function CL(nf,fc)for m,h in pairs(HL)do if fc or not m.Parent or not nf or not m:IsDescendantOf(nf)or not SS(m)then if h then h:Destroy()end HL[m]=nil end end end local function UE()local nf=GNF()if not nf then return end CL(nf,false)for _,m in pairs(nf:GetChildren())do if m:IsA("Model")and MHP(m)and SS(m)then local ty=nil if IA(m)then if CF.ESPAnomaly then ty="anomaly"end elseif IP(m)then if CF.ESPPatient then ty="patient"end elseif IV(m)then if CF.ESPVisitor then ty="visitor"end end if ty then SH(m,ty)else RH(m)end end end end local function CE()for m,h in pairs(HL)do h:Destroy()end HL={}end task.spawn(function()while true do UE()task.wait(1.5)end end)local function FPAT()local pat={}local nf=GNF()if not nf then return pat end for _,m in pairs(nf:GetChildren())do if m:IsA("Model")and IP(m)then table.insert(pat,m)end end return pat end local function FAN()local an={}local nf=GNF()if not nf then return an end for _,m in pairs(nf:GetChildren())do if m:IsA("Model")and IA(m)then table.insert(an,m)end end return an end local function HP(pat)for _,d in pairs(pat:GetDescendants())do if d:IsA("ProximityPrompt")and d.Enabled then local a=d.ActionText or""if string.find(string.lower(a),"treat")or string.find(string.lower(a),"heal")then return FPWC(d,pat:GetPivot().Position)end end if d:IsA("ClickDetector")then return CB(d.Parent)end end return false end local function RA()local shut=W:FindFirstChild("Shutters")if shut then for _,d in pairs(shut:GetDescendants())do if d:IsA("ProximityPrompt")and d.Enabled then return FPWC(d,shut.Position)end if d:IsA("ClickDetector")then return CB(d.Parent)end end end return false end task.spawn(function()while true do task.wait(CF.FarmDelay or1.5)if CF.AutoFarm then local pts=FPAT()for _,pt in pairs(pts)do HP(pt)task.wait(0.3)end end end end)task.spawn(function()while true do task.wait(1)if CF.AutoReject then RA()end end end)local function GER()return W:FindFirstChild("EmergencyRooms")or W:FindFirstChild("Emergency")end local function FXMM(rm6)if not rm6 then return nil end for _,o in pairs(rm6:GetDescendants())do if o:IsA("BasePart")and(string.find(string.lower(o.Name),"xray")or string.find(string.lower(o.Name),"x-ray"))then return o.Parent end if o:IsA("ProximityPrompt")and o.ActionText and string.find(string.lower(o.ActionText),"x-ray")then return o.Parent end end return nil end local function FCM(rm6)if not rm6 then return nil end local mg=rm6:FindFirstChild("Minigame")or rm6 return mg:FindFirstChild("Colors")or mg:FindFirstChild("Buttons")end local function GBM(cf)if not cf then return{}end local btns={}for _,m in pairs(cf:GetChildren())do if m:IsA("Model")and m:FindFirstChild("Button")then local b=m:FindFirstChild("Button")if b and b:IsA("BasePart")then table.insert(btns,b)end end end return btns end local function GBC(cf)if not cf then return{}end local cols={}for _,m in pairs(cf:GetChildren())do if m:IsA("Model")and m:FindFirstChild("Button")then local b=m:FindFirstChild("Button")if b and b:IsA("BasePart")then table.insert(cols,b.Color)end end end return cols end local function CCB(cf,ic)if not cf or not ic then return 0 end local cc=GBC(cf)local ch=0 for i=1,math.min(#ic,#cc)do if ic[i]~=cc[i]then ch=ch+1 end end return ch end local function GPAT(at,root)if not at or at==""then return nil end if not root then root=W end local tt=string.lower(at)for _,d in pairs(root:GetDescendants())do if d:IsA("ProximityPrompt")and d.Enabled and d.ActionText then local la=string.lower(d.ActionText)if string.find(la,tt)or string.find(tt,la)then return d end end end return nil end local function AR6S()local em=GER()if not em then return end local rm6=em:FindFirstChild("Room6")if not rm6 then return end local mg=rm6:FindFirstChild("Minigame")if not mg then return end print("🔄 Starting Auto Room 6...")local xm=FXMM(rm6)if xm then local xp=xm:FindFirstChild("PP")if xp and xp:IsA("ProximityPrompt")and xp.Enabled then local pt=FBPO(xm)if pt then print("📸 Interacting with Begin X-Ray...")ST(pt.Position)FPWC(xp,pt.Position)task.wait(0.5)end end end local cf=FCM(rm6)if not cf then print("❌ Colors folder not found!")return end local ic=GBC(cf)local btns=GBM(cf)if #btns<4 then print("❌ Less than 4 buttons found!")return end print("🎨 Waiting for 4 buttons to change color...")local to=0 local ch=0 local mw=15 while to<mw and ch<4 do task.wait(0.2)ch=CCB(cf,ic)to=to+0.2 end print("✅ "..ch.." buttons changed color (expected: 4)")print("⏳ Waiting 1.5 seconds...")task.wait(1.5)print("🔘 Clicking buttons...")local cl=0 for _,b in pairs(btns)do if b and b:IsA("BasePart")then ST(b.Position+Vector3.new(0,1,2))LAP(b.Position)task.wait(0.2)if CB(b)then cl=cl+1 print("✅ Button "..cl.." clicked")end task.wait(0.15)end end print("✅ "..cl.." buttons clicked")print("⏳ Waiting for 'Process Results'...")local pp=nil local pt=0 while pt<10 do pp=GPAT("process results",mg)if pp then break end task.wait(0.3)pt=pt+0.3 end if pp then local part=FBPO(pp.Parent)if part then print("📄 Interacting with Process Results...")ST(part.Position)FPWC(pp,part.Position)task.wait(0.5)end else print("⚠️ 'Process Results' not found!")end print("⏳ Waiting for 'Print Badge'...")local pbp=nil local bt=0 while bt<10 do pbp=GPAT("print badge",mg)if pbp then break end task.wait(0.3)bt=bt+0.3 end if pbp then local part=FBPO(pbp.Parent)if part then print("🖨️ Interacting with Print Badge...")ST(part.Position)FPWC(pbp,part.Position)task.wait(0.5)end else print("⚠️ 'Print Badge' not found!")end print("🔍 Searching for 'Collect' in Workspace...")local cp=nil local ct=0 while ct<8 do cp=GPAT("collect",W)if cp then break end task.wait(0.3)ct=ct+0.3 end if cp then local part=FBPO(cp.Parent)if part then print("📦 Interacting with Collect...")ST(part.Position)FPWC(cp,part.Position)task.wait(0.3)end else print("⚠️ 'Collect' not found!")end print("✅ Auto Room 6 completed successfully!")end task.spawn(function()while true do task.wait(3)if CF.AutoRoom6 then AR6S()print("⏳ Waiting 3 seconds before restarting Room 6...")task.wait(3)end end end)local function PGR()for _,d in pairs(W:GetDescendants())do if not CF.AutoProcess then break end if d:IsA("ProximityPrompt")and d.Enabled and d.ActionText then local txt=string.lower(d.ActionText)if string.find(txt,"dna")or string.find(txt,"analyze")or string.find(txt,"process")then local pt=FBPO(d.Parent)if pt then ST(pt.Position)FPD(d)end end end end end task.spawn(function()while true do task.wait(1.5)if CF.AutoProcess then PGR()end end end)local function FIBR(rm)if not rm then return nil end for _,c in pairs(rm:GetChildren())do if c:IsA("Model")or c:IsA("BasePart")then local n=string.lower(c.Name)if string.find(n,"bed")or string.find(n,"inbed")then return c end end end return rm end task.spawn(function()while true do task.wait(2)if CF.AutoRoom7 then local em=GER()local rm7=em and em:FindFirstChild("Room7")if rm7 then local ib=FIBR(rm7)if ib then for _,pr in pairs(ib:GetDescendants())do if pr:IsA("ProximityPrompt")and pr.Enabled then local txt=string.lower(pr.ActionText or"")local targets={"sleep","prepare","set up","turn on","begin","collect"}for _,t in pairs(targets)do if string.find(txt,t)then local pt=FBPO(pr.Parent)if pt then ST(pt.Position)FPD(pr)end break end end end end end end end end end)task.spawn(function()while true do task.wait(2)if CF.AutoRoom8 then local em=GER()local rm8=em and em:FindFirstChild("Room8")if rm8 then local ib=FIBR(rm8)if ib then for _,pr in pairs(ib:GetDescendants())do if pr:IsA("ProximityPrompt")and pr.Enabled then local txt=string.lower(pr.ActionText or"")if string.find(txt,"sleep")or string.find(txt,"patient")then local pt=FBPO(pr.Parent)if pt then ST(pt.Position)FPD(pr)end end end end end end end end end)local function HPrompt(pr)if not pr:IsA("ProximityPrompt")then return end if CF.InstantAction then pr.HoldDuration=0 end end W.DescendantAdded:Connect(HPrompt)for _,p in pairs(W:GetDescendants())do HPrompt(p)end local OC={}local function SOC()local c=GC()if not c or next(OC)~=nil then return end for _,pt in pairs(c:GetDescendants())do if pt:IsA("BasePart")then OC[pt]=pt.CanCollide end end end local function ROC()local c=GC()if not c then return end for pt,cc in pairs(OC)do if pt and pt.Parent then pt.CanCollide=cc end end OC={}end local function ANC()local c=GC()if not c then return end for _,pt in pairs(c:GetDescendants())do if pt:IsA("BasePart")and pt.Name~="HumanoidRootPart"then pt.CanCollide=not CF.NoClip end end end RS.Heartbeat:Connect(function()local h=GH()if h then h.WalkSpeed=CF.WalkSpeed end if CF.NoClip then SOC()ANC()else ROC()end end)task.spawn(function()while true do task.wait(0.5)if CF.AutoCheckIn then pcall(function()local rec=W:FindFirstChild("Reception")if rec then local trig=rec:FindFirstChild("CheckInTriggers")if trig then for _,v in pairs(trig:GetChildren())do if v:IsA("BasePart")then GRP().CFrame=v.CFrame end end end end end)task.wait(0.5)end end end)task.spawn(function()while true do task.wait(1)if CF.AutoBarneyCoffee then pcall(function()local npcs=W:FindFirstChild("NPCs")if npcs then local bar=npcs:FindFirstChild("Barney")if bar then local args={[1]="GiveCoffee",[2]=bar}local rem=RP:FindFirstChild("Remotes")if rem then local inter=rem:FindFirstChild("Interaction")if inter then inter:FireServer(unpack(args))end end end end end)task.wait(1)end end end)task.spawn(function()while true do task.wait(0.5)if CF.AutoTreat then pcall(function()local pts=W:FindFirstChild("Patients")if pts then for _,v in pairs(pts:GetChildren())do if v:FindFirstChild("HumanoidRootPart")then GRP().CFrame=v.HumanoidRootPart.CFrame*CFrame.new(0,0,2)local rem=RP:FindFirstChild("Remotes")if rem then local tr=rem:FindFirstChild("TreatPatient")if tr then tr:FireServer(v)end end end end end end)task.wait(0.5)end end end)local U={Config=CF,SafeTeleport=ST,LookAtPosition=LAP,FirePromptDirect=FPD,FirePromptWithCamera=FPWC,ClickButton=CB,GetCachedItemPrompt=GCIP,RefreshItemCache=RIC,findPatients=FPAT,findAnomalies=FAN,healPatient=HP,rejectAnomaly=RA,updateESP=UE,clearESP=CE,GetEmergencyRooms=GER,AutoRoom6Sequence=AR6S,startInfiniteSanity=SIS,stopInfiniteSanity=TIS,GetCharacter=GC,GetHumanoid=GH,GetRootPart=GRP,FindBasePartInObject=FBPO,}getgenv().Utility=U getgenv().Config=CF print("✅ Utility loaded successfully.")local Wnd=R:CreateWindow({Name="Animal Hospital - XDHub",LoadingTitle="Enjoy!",LoadingSubtitle="by Shellae",ConfigurationSaving={Enabled=true,FolderName="AnimalHospitalXDHub",FileName="Settings"},Discord={Enabled=false},KeySystem=false,})local MT=Wnd:CreateTab("Main")local ET=Wnd:CreateTab("ESP")local STab=Wnd:CreateTab("Settings")MT:CreateSection("Auto Farm")MT:CreateToggle({Name="Auto Treat Patients",CurrentValue=false,Callback=function(v)CF.AutoFarm=v end})MT:CreateToggle({Name="Auto Reject Anomalies",CurrentValue=false,Callback=function(v)CF.AutoReject=v end})MT:CreateSection("Sanity")MT:CreateToggle({Name="Infinite Sanity",CurrentValue=false,Callback=function(v)CF.InfiniteSanity=v end})MT:CreateSection("Interaction")MT:CreateToggle({Name="Instant Action (no hold)",CurrentValue=false,Callback=function(v)CF.InstantAction=v end})MT:CreateSection("Movement")MT:CreateSlider({Name="Walk Speed",Range={16,50},Increment=1,CurrentValue=16,Callback=function(v)CF.WalkSpeed=v end})MT:CreateToggle({Name="NoClip",CurrentValue=false,Callback=function(v)CF.NoClip=v end})ET:CreateSection("ESP Toggles")local eA=ET:CreateToggle({Name="ESP Anomalies (Skinwalker)",CurrentValue=false,Callback=function(v)CF.ESPAnomaly=v end})local eP=ET:CreateToggle({Name="ESP Patients",CurrentValue=false,Callback=function(v)CF.ESPPatient=v end})local eV=ET:CreateToggle({Name="ESP Visitors",CurrentValue=false,Callback=function(v)CF.ESPVisitor=v end})ET:CreateButton({Name="Clear All ESP",Callback=function()CE()eA:SetValue(false)eP:SetValue(false)eV:SetValue(false)end})STab:CreateSection("Hub Settings")STab:CreateKeybind({Name="Toggle GUI",CurrentKeybind="RightControl",HoldToInteract=false,Callback=function()Wnd:Toggle()end})STab:CreateButton({Name="Reset All Settings",Callback=function()R:Destroy()print("Settings reset. Re-run the script to reload.")end})print("✅ Animal Hospital - XDHub GUI loaded successfully!")
+-- =====================================================================
+-- SHELLY'S WORLD v4.9 + XDHUB FEATURES (FULL INTEGRATION)
+-- =====================================================================
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Camera = Workspace.CurrentCamera
+
+if PlayerGui:FindFirstChild("ShellysWorldV49") then
+    PlayerGui.ShellysWorldV49:Destroy()
+end
+
+local ShellysWorldV49 = Instance.new("ScreenGui")
+ShellysWorldV49.Name = "ShellysWorldV49"
+ShellysWorldV49.Parent = PlayerGui
+ShellysWorldV49.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ShellysWorldV49.ResetOnSpawn = false
+
+-- --- Color Palettes ---
+local TWEEN_FAST = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local TWEEN_SLOW = TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+
+local COLOR_PANEL_BG = Color3.fromRGB(24, 18, 14)       
+local TRANS_PANEL = 0.25 
+
+local COLOR_DISPLAY_BG = Color3.fromRGB(33, 26, 21)     
+local TRANS_DISPLAY = 0.40
+
+local COLOR_OFF_BG = Color3.fromRGB(48, 40, 35)       
+local COLOR_OFF_STROKE = Color3.fromRGB(75, 65, 58)
+local TRANS_OFF = 0.30
+
+local COLOR_ON_BG = Color3.fromRGB(143, 91, 53)         
+local COLOR_ON_STROKE = Color3.fromRGB(184, 122, 79)
+local COLOR_RED_BG = Color3.fromRGB(180, 50, 50)
+local COLOR_RED_STROKE = Color3.fromRGB(220, 80, 80)
+
+-- --- Main Dashboard Frame ---
+local MainPanel = Instance.new("ImageLabel")
+MainPanel.Name = "MainPanel"
+MainPanel.Parent = ShellysWorldV49
+MainPanel.BackgroundColor3 = COLOR_PANEL_BG
+MainPanel.BackgroundTransparency = TRANS_PANEL
+MainPanel.Position = UDim2.new(0.5, -200, 0.4, -175)
+MainPanel.Size = UDim2.new(0, 400, 0, 350)
+MainPanel.ZIndex = 5
+MainPanel.ScaleType = Enum.ScaleType.Crop
+MainPanel.Image = "" 
+MainPanel.ImageTransparency = 1 
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 9)
+MainCorner.Parent = MainPanel
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(184, 122, 79)        
+MainStroke.Thickness = 1.2
+MainStroke.Transparency = 0.2
+MainStroke.Parent = MainPanel
+
+-- --- Title Header ---
+local TitleHeader = Instance.new("TextLabel")
+TitleHeader.Name = "TitleHeader"
+TitleHeader.Parent = MainPanel
+TitleHeader.BackgroundTransparency = 1
+TitleHeader.Size = UDim2.new(1, 0, 0, 45)
+TitleHeader.Font = Enum.Font.SourceSansBold
+TitleHeader.Text = "🐾 XDHUB | ANIMAL HOSPITAL"
+TitleHeader.TextColor3 = Color3.fromRGB(235, 195, 150) 
+TitleHeader.TextSize = 16
+TitleHeader.TextXAlignment = Enum.TextXAlignment.Left
+TitleHeader.ZIndex = 6
+
+local TitlePadding = Instance.new("UIPadding")
+TitlePadding.PaddingLeft = UDim.new(0, 15)
+TitlePadding.Parent = TitleHeader
+
+local AccentLine = Instance.new("Frame")
+AccentLine.Name = "AccentLine"
+AccentLine.Parent = TitleHeader
+AccentLine.BackgroundColor3 = Color3.fromRGB(143, 91, 53)
+AccentLine.BackgroundTransparency = 0.6
+AccentLine.BorderSizePixel = 0
+AccentLine.Position = UDim2.new(-0.01, 0, 1, -1)
+AccentLine.Size = UDim2.new(0.92, 0, 0, 1)
+AccentLine.ZIndex = 6
+
+-- --- Floating Reopen Icon ---
+local OpenIcon = Instance.new("TextButton")
+OpenIcon.Name = "OpenIcon"
+OpenIcon.Parent = ShellysWorldV49
+OpenIcon.BackgroundColor3 = Color3.fromRGB(110, 70, 40)
+OpenIcon.BackgroundTransparency = 0.2
+OpenIcon.Position = UDim2.new(0, 20, 0.4, 0)
+OpenIcon.Size = UDim2.new(0, 50, 0, 50)
+OpenIcon.Font = Enum.Font.SourceSansBold
+OpenIcon.Text = "🐾"                                  
+OpenIcon.TextColor3 = Color3.fromRGB(255, 235, 190)
+OpenIcon.TextSize = 28
+OpenIcon.ZIndex = 10
+OpenIcon.Visible = false
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(1, 0)
+IconCorner.Parent = OpenIcon
+
+local IconStroke = Instance.new("UIStroke")
+IconStroke.Color = Color3.fromRGB(75, 45, 25)
+IconStroke.Thickness = 2
+IconStroke.Parent = OpenIcon
+
+-- --- UI Control Actions ---
+local function toggleUI(showPanel)
+    if showPanel then
+        OpenIcon.Visible = false
+        MainPanel.Visible = true
+        MainPanel:TweenPosition(UDim2.new(0.5, -200, 0.4, -175), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+    else
+        MainPanel:TweenPosition(UDim2.new(0.5, -200, -0.5, 0), Enum.EasingDirection.In, Enum.EasingStyle.Quart, 0.3, true, function()
+            MainPanel.Visible = false
+            OpenIcon.Visible = true
+        end)
+    end
+end
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = MainPanel
+CloseButton.BackgroundTransparency = 1
+CloseButton.Position = UDim2.new(1, -40, 0, 10)
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.Text = "✕"
+CloseButton.TextColor3 = Color3.fromRGB(231, 76, 60)
+CloseButton.TextSize = 18
+CloseButton.ZIndex = 6
+
+CloseButton.MouseButton1Click:Connect(function() toggleUI(false) end)
+OpenIcon.MouseButton1Click:Connect(function() toggleUI(true) end)
+
+-- --- Sidebar Navigation ---
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.Parent = MainPanel
+Sidebar.BackgroundTransparency = 1
+Sidebar.Position = UDim2.new(0, 10, 0, 55)
+Sidebar.Size = UDim2.new(0, 85, 1, -65)
+Sidebar.ZIndex = 6
+
+local SidebarLayout = Instance.new("UIListLayout")
+SidebarLayout.Parent = Sidebar
+SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SidebarLayout.Padding = UDim.new(0, 4)
+
+-- --- Main Content Box ---
+local DisplayArea = Instance.new("Frame")
+DisplayArea.Name = "DisplayArea"
+DisplayArea.Parent = MainPanel
+DisplayArea.BackgroundColor3 = COLOR_DISPLAY_BG
+DisplayArea.BackgroundTransparency = TRANS_DISPLAY
+DisplayArea.Position = UDim2.new(0, 100, 0, 55)
+DisplayArea.Size = UDim2.new(1, -110, 1, -65)
+DisplayArea.ZIndex = 6
+
+local AreaCorner = Instance.new("UICorner")
+AreaCorner.CornerRadius = UDim.new(0, 6)
+AreaCorner.Parent = DisplayArea
+
+local AreaStroke = Instance.new("UIStroke")
+AreaStroke.Color = Color3.fromRGB(255, 255, 255)
+AreaStroke.Thickness = 1
+AreaStroke.Transparency = 0.94
+AreaStroke.Parent = DisplayArea
+
+-- --- Navigation Tabs Modules ---
+local Pages = {}
+
+local function createPage(pageName)
+    local PageFrame = Instance.new("ScrollingFrame")
+    PageFrame.Name = pageName .. "Page"
+    PageFrame.Parent = DisplayArea
+    PageFrame.BackgroundTransparency = 1
+    PageFrame.Size = UDim2.new(1, 0, 1, 0)
+    PageFrame.CanvasSize = UDim2.new(0, 0, 0, 400)
+    PageFrame.ScrollBarThickness = 2
+    PageFrame.ScrollBarImageColor3 = Color3.fromRGB(184, 122, 79)
+    PageFrame.Visible = false
+    PageFrame.ZIndex = 7
+    
+    local PageLayout = Instance.new("UIListLayout")
+    PageLayout.Parent = PageFrame
+    PageLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    PageLayout.Padding = UDim.new(0, 6)
+    
+    local UIPadding = Instance.new("UIPadding")
+    UIPadding.PaddingTop = UDim.new(0, 6)
+    UIPadding.Parent = PageFrame
+    
+    Pages[pageName] = PageFrame
+    return PageFrame
+end
+
+local function createTabButton(targetPage, displayTitle, layoutIndex)
+    local TabBtn = Instance.new("TextButton")
+    TabBtn.Name = targetPage .. "TabBtn"
+    TabBtn.Parent = Sidebar
+    TabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    TabBtn.BackgroundTransparency = 0.96
+    TabBtn.Size = UDim2.new(1, 0, 0, 30)
+    TabBtn.Font = Enum.Font.SourceSansBold
+    TabBtn.Text = displayTitle
+    TabBtn.TextColor3 = Color3.fromRGB(140, 135, 130)
+    TabBtn.TextSize = 12
+    TabBtn.LayoutOrder = layoutIndex
+    TabBtn.ZIndex = 7
+    
+    local TabCorner = Instance.new("UICorner")
+    TabCorner.CornerRadius = UDim.new(0, 5)
+    TabCorner.Parent = TabBtn
+    
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, page in pairs(Pages) do page.Visible = false end
+        for _, btn in ipairs(Sidebar:GetChildren()) do
+            if btn:IsA("TextButton") then
+                btn.BackgroundTransparency = 0.96
+                btn.TextColor3 = Color3.fromRGB(140, 135, 130)
+            end
+        end
+        Pages[targetPage].Visible = true
+        TabBtn.BackgroundTransparency = 0.90
+        TabBtn.TextColor3 = Color3.fromRGB(235, 195, 150)
+    end)
+end
+
+createPage("Main")
+createPage("Auto")
+createPage("ESP")
+createPage("Custom")
+
+createTabButton("Main", "⚡ Main", 1)
+createTabButton("Auto", "🤖 Auto", 2)
+createTabButton("ESP", "👁️ ESP", 3)
+createTabButton("Custom", "🎨 Custom", 4)
+
+Pages.Main.Visible = true
+Sidebar:FindFirstChild("MainTabBtn").BackgroundTransparency = 0.90
+Sidebar:FindFirstChild("MainTabBtn").TextColor3 = Color3.fromRGB(235, 195, 150)
+
+-- =====================================================================
+-- COMPONENT FACTORIES
+-- =====================================================================
+
+local function addActionButton(targetPage, text, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0.92, 0, 0, 32)
+    Button.BackgroundColor3 = Color3.fromRGB(46, 36, 30)
+    Button.BackgroundTransparency = 0.4
+    Button.Font = Enum.Font.SourceSansBold
+    Button.Text = text
+    Button.TextColor3 = Color3.fromRGB(235, 225, 215)
+    Button.TextSize = 13
+    Button.Parent = Pages[targetPage]
+    Button.ZIndex = 8
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 5)
+    Corner.Parent = Button
+    
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(255, 255, 255)
+    Stroke.Thickness = 1
+    Stroke.Transparency = 0.92
+    Stroke.Parent = Button
+    
+    Button.MouseButton1Click:Connect(function()
+        TweenService:Create(Button, TWEEN_FAST, {BackgroundTransparency = 0.2}):Play()
+        task.wait(0.1)
+        TweenService:Create(Button, TWEEN_FAST, {BackgroundTransparency = 0.4}):Play()
+        callback()
+    end)
+end
+
+local function addToggle(targetPage, text, callback, isBroken)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(0.92, 0, 0, 36)
+    Row.BackgroundTransparency = 1
+    Row.Parent = Pages[targetPage]
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.65, 0, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Font = Enum.Font.SourceSansBold
+    Label.Text = text
+    Label.TextColor3 = isBroken and Color3.fromRGB(255, 150, 150) or Color3.fromRGB(205, 195, 185)
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Row
+    Label.ZIndex = 8
+    
+    -- Broken indicator
+    if isBroken then
+        local BrokenLabel = Instance.new("TextLabel")
+        BrokenLabel.Size = UDim2.new(0, 35, 1, 0)
+        BrokenLabel.Position = UDim2.new(0.65, 5, 0, 0)
+        BrokenLabel.BackgroundTransparency = 1
+        BrokenLabel.Font = Enum.Font.SourceSansBold
+        BrokenLabel.Text = "⚠️"
+        BrokenLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+        BrokenLabel.TextSize = 14
+        BrokenLabel.TextXAlignment = Enum.TextXAlignment.Left
+        BrokenLabel.Parent = Row
+        BrokenLabel.ZIndex = 8
+    end
+    
+    local Switch = Instance.new("TextButton")
+    Switch.Size = UDim2.new(0, 38, 0, 18)
+    Switch.Position = UDim2.new(1, -38, 0.5, -9)
+    Switch.Text = "" 
+    Switch.BackgroundColor3 = isBroken and COLOR_RED_BG or COLOR_OFF_BG
+    Switch.BackgroundTransparency = isBroken and 0.2 or TRANS_OFF
+    Switch.Parent = Row
+    Switch.ZIndex = 8
+    
+    local SwitchCorner = Instance.new("UICorner")
+    SwitchCorner.CornerRadius = UDim.new(0, 4)
+    SwitchCorner.Parent = Switch
+    
+    local SwitchStroke = Instance.new("UIStroke")
+    SwitchStroke.Color = isBroken and COLOR_RED_STROKE or COLOR_OFF_STROKE
+    SwitchStroke.Thickness = 1
+    SwitchStroke.Parent = Switch
+    
+    local state = false
+    Switch.MouseButton1Click:Connect(function()
+        state = not state
+        if state then
+            TweenService:Create(Switch, TWEEN_FAST, {BackgroundColor3 = isBroken and COLOR_RED_BG or COLOR_ON_BG, BackgroundTransparency = isBroken and 0.1 or 0}):Play()
+            TweenService:Create(SwitchStroke, TWEEN_FAST, {Color3 = isBroken and COLOR_RED_STROKE or COLOR_ON_STROKE}):Play()
+        else
+            TweenService:Create(Switch, TWEEN_FAST, {BackgroundColor3 = isBroken and COLOR_RED_BG or COLOR_OFF_BG, BackgroundTransparency = isBroken and 0.2 or TRANS_OFF}):Play()
+            TweenService:Create(SwitchStroke, TWEEN_FAST, {Color3 = isBroken and COLOR_RED_STROKE or COLOR_OFF_STROKE}):Play()
+        end
+        callback(state)
+    end)
+end
+
+local function addInputBox(targetPage, placeholderText, callback)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(0.92, 0, 0, 42)
+    Row.BackgroundTransparency = 1
+    Row.Parent = Pages[targetPage]
+    
+    local TextBox = Instance.new("TextBox")
+    TextBox.Size = UDim2.new(1, 0, 0, 32)
+    TextBox.Position = UDim2.new(0, 0, 0.5, -16)
+    TextBox.BackgroundColor3 = Color3.fromRGB(36, 28, 24)
+    TextBox.BackgroundTransparency = 0.5
+    TextBox.Font = Enum.Font.SourceSansBold
+    TextBox.PlaceholderText = placeholderText
+    TextBox.PlaceholderColor3 = Color3.fromRGB(120, 110, 100)
+    TextBox.Text = ""
+    TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TextBox.TextSize = 13
+    TextBox.ClearTextOnFocus = false
+    TextBox.Parent = Row
+    TextBox.ZIndex = 8
+    
+    local BoxCorner = Instance.new("UICorner")
+    BoxCorner.CornerRadius = UDim.new(0, 5)
+    BoxCorner.Parent = TextBox
+    
+    local BoxStroke = Instance.new("UIStroke")
+    BoxStroke.Color = Color3.fromRGB(90, 75, 65)
+    BoxStroke.Thickness = 1
+    BoxStroke.Parent = TextBox
+    
+    TextBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed and TextBox.Text ~= "" then callback(TextBox.Text) end
+    end)
+end
+
+-- =====================================================================
+-- XDHUB FEATURES (INSTANT PROMPTS + AUTO CHECK-IN)
+-- =====================================================================
+
+-- --- Feature State ---
+local Features = {
+    InstantPrompts = false,
+    AutoCheckIn = false,
+    InfiniteSanity = false,
+    SpeedHack = false,
+    AutoHeartbeat = false,
+    NpcESP = false,
+    RoomESP = false,
+}
+
+-- --- Prompt Override System ---
+local promptConnections = {}
+local promptOverrides = {}
+
+local function overridePrompt(prompt)
+    if not prompt then return end
+    
+    if not prompt:GetAttribute("OriginalHoldDuration") then
+        prompt:SetAttribute("OriginalHoldDuration", prompt.HoldDuration)
+    end
+    
+    prompt.HoldDuration = 0
+    prompt.RequiresLineOfSight = false
+    prompt.Exclusive = false
+    
+    if prompt.MaxActivationDistance then
+        prompt.MaxActivationDistance = 100
+    end
+    
+    if not promptOverrides[prompt] then
+        promptOverrides[prompt] = prompt:GetPropertyChangedSignal("HoldDuration"):Connect(function()
+            if Features.InstantPrompts and prompt.HoldDuration > 0 then
+                prompt.HoldDuration = 0
+            end
+        end)
+    end
+end
+
+local function overrideAllPrompts()
+    for _, prompt in ipairs(Workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") then
+            overridePrompt(prompt)
+        end
+    end
+end
+
+local function restoreAllPrompts()
+    for _, prompt in ipairs(Workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") then
+            local original = prompt:GetAttribute("OriginalHoldDuration")
+            if original then
+                prompt.HoldDuration = original
+                prompt:SetAttribute("OriginalHoldDuration", nil)
+            end
+        end
+    end
+end
+
+local function setupPromptSystem()
+    -- Clean old connections
+    for _, conn in pairs(promptConnections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    promptConnections = {}
+    
+    -- Watch for new prompts
+    local conn1 = Workspace.DescendantAdded:Connect(function(obj)
+        if Features.InstantPrompts and obj:IsA("ProximityPrompt") then
+            overridePrompt(obj)
+        end
+    end)
+    table.insert(promptConnections, conn1)
+    
+    -- Instant override when prompt shows
+    local conn2 = ProximityPromptService.PromptShown:Connect(function(prompt)
+        if Features.InstantPrompts then
+            overridePrompt(prompt)
+        end
+    end)
+    table.insert(promptConnections, conn2)
+    
+    overrideAllPrompts()
+end
+
+-- --- Auto Check-In System ---
+local function autoCheckIn()
+    if not Features.AutoCheckIn then return end
+    
+    pcall(function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        
+        local reception = Workspace:FindFirstChild("Reception")
+        if not reception then return end
+        
+        -- Find check-in triggers
+        local checkInParts = {}
+        local triggers = reception:FindFirstChild("CheckInTriggers")
+        
+        if triggers then
+            for _, v in ipairs(triggers:GetChildren()) do
+                if v:IsA("BasePart") then
+                    table.insert(checkInParts, v)
+                end
+            end
+        else
+            for _, v in ipairs(reception:GetDescendants()) do
+                if v:IsA("BasePart") and string.find(v.Name:lower(), "check") then
+                    table.insert(checkInParts, v)
+                end
+            end
+        end
+        
+        for _, part in ipairs(checkInParts) do
+            root.CFrame = part.CFrame + Vector3.new(0, 2, 0)
+            task.wait(0.2)
+            
+            -- Try to interact with prompts nearby
+            for _, prompt in ipairs(reception:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") then
+                    local distance = (prompt:GetPivot().Position - root.Position).Magnitude
+                    if distance < 20 then
+                        pcall(function()
+                            if prompt.Fire then
+                                prompt:Fire(LocalPlayer)
+                            end
+                        end)
+                    end
+                end
+                if prompt:IsA("ClickDetector") then
+                    local distance = (prompt:GetPivot().Position - root.Position).Magnitude
+                    if distance < 20 then
+                        pcall(function()
+                            prompt:FireClick(LocalPlayer)
+                        end)
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+    end)
+end
+
+-- --- Speed Hack ---
+local function toggleSpeedHack(enabled)
+    if enabled then
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = 30
+        end
+    else
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = 16
+        end
+    end
+end
+
+-- --- Infinite Sanity ---
+local function toggleInfiniteSanity(enabled)
+    if enabled then
+        LocalPlayer:SetAttribute("Sanity", 100)
+    end
+end
+
+-- --- Auto Heartbeat ---
+local function setupAutoHeartbeat()
+    local heartbeatEvent = ReplicatedStorage:FindFirstChild("RE/StartHeartbeatMinigame")
+    if not heartbeatEvent then
+        -- Try to find it elsewhere
+        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+            if string.find(obj.Name, "Heartbeat") then
+                heartbeatEvent = obj
+                break
+            end
+        end
+    end
+    
+    if heartbeatEve
