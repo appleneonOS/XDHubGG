@@ -12,7 +12,7 @@ local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 -- Configuration
 local PROXIMITY_RANGE = 25 -- Distance to trigger prompt (in studs)
 local UPDATE_INTERVAL = 0.1 -- Check interval in seconds
-local AUTO_PROCESS_ENABLED = true
+local AUTO_PROCESS_ENABLED = true -- Always enabled
 
 -- Proximity Prompt Detection System
 local function findNearbyPrompts()
@@ -67,9 +67,9 @@ local function autoTriggerPrompt()
     end
 end
 
--- Main loop
+-- Main loop - Auto execute continuously
 local lastTriggerTime = 0
-local TRIGGER_COOLDOWN = 1 -- Cooldown between auto-triggers (seconds)
+local TRIGGER_COOLDOWN = 0.5 -- Cooldown between auto-triggers (seconds)
 
 RunService.Heartbeat:Connect(function()
     if not character or not humanoidRootPart or not humanoidRootPart.Parent then
@@ -78,23 +78,10 @@ RunService.Heartbeat:Connect(function()
     
     local currentTime = tick()
     
-    -- Auto-trigger with cooldown
+    -- Auto-trigger with cooldown - ALWAYS RUNNING
     if currentTime - lastTriggerTime >= TRIGGER_COOLDOWN then
-        if AUTO_PROCESS_ENABLED then
-            autoTriggerPrompt()
-            lastTriggerTime = currentTime
-        end
-    end
-end)
-
--- Toggle auto-process with a key
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    -- Press 'P' to toggle auto-process
-    if input.KeyCode == Enum.KeyCode.P then
-        AUTO_PROCESS_ENABLED = not AUTO_PROCESS_ENABLED
-        print("Auto-Process: " .. (AUTO_PROCESS_ENABLED and "ENABLED" or "DISABLED"))
+        autoTriggerPrompt()
+        lastTriggerTime = currentTime
     end
 end)
 
@@ -105,4 +92,4 @@ player.CharacterAdded:Connect(function(newCharacter)
 end)
 
 print("✓ Auto-Proximity Prompt System Loaded!")
-print("Press 'P' to toggle auto-process on/off")
+print("✓ Auto-Execute ACTIVE - Prompts will trigger automatically!")
