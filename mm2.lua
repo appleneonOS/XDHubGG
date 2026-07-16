@@ -1,5 +1,5 @@
 -- Murder Mystery 2 ESP System
--- Shows player roles with text labels only (no boxes)
+-- Shows player roles with outlines (no text labels)
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -7,7 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 -- Configuration
 local ESP_CONFIG = {
     enabled = true,
-    textSize = 18,
+    lineThickness = 0.05,
     updateRate = 0.1,
     maxDistance = 500,
 }
@@ -19,7 +19,7 @@ local COLORS = {
     Innocent = Color3.fromRGB(0, 255, 0),      -- Green
 }
 
--- Cache for ESP drawables
+-- Cache for ESP outlines
 local espCache = {}
 
 -- Function to get player role
@@ -51,70 +51,68 @@ local function getPlayerRole(player)
     return role
 end
 
--- Function to create or update ESP for a player
+-- Function to add outlines to character parts
+local function addOutlines(character, color)
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if not part:FindFirstChild("ESP_Outline") then
+                local outline = Instance.new("SelectionBox")
+                outline.Name = "ESP_Outline"
+                outline.Adornee = part
+                outline.Color3 = color
+                outline.LineThickness = ESP_CONFIG.lineThickness
+                outline.Parent = part
+            end
+        end
+    end
+end
+
+-- Function to remove outlines from character
+local function removeOutlines(character)
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local outline = part:FindFirstChild("ESP_Outline")
+            if outline then
+                outline:Destroy()
+            end
+        end
+    end
+end
+
+-- Function to update ESP for a player
 local function updateESP(player)
     if player == Players.LocalPlayer then return end
     
     local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    if not character then return end
     
-    local humanoidRootPart = character.HumanoidRootPart
     local role = getPlayerRole(player)
     local color = COLORS[role] or COLORS.Innocent
     
-    -- Create ESP label if it doesn't exist
-    if not espCache[player.UserId] then
-        local bill = Instance.new("BillboardGui")
-        bill.Name = "ESP_Label"
-        bill.Size = UDim2.new(4, 0, 1.5, 0)
-        bill.MaxDistance = ESP_CONFIG.maxDistance
-        bill.Adornee = humanoidRootPart
-        bill.StudsOffset = Vector3.new(0, 3, 0)
-        
-        local textLabel = Instance.new("TextLabel")
-        textLabel.Name = "Role"
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.TextScaled = true
-        textLabel.TextSize = ESP_CONFIG.textSize
-        textLabel.BorderSizePixel = 0
-        textLabel.TextColor3 = color
-        
-        textLabel.Parent = bill
-        bill.Parent = humanoidRootPart
-        
-        espCache[player.UserId] = {
-            billboard = bill,
-            textLabel = textLabel,
-            lastRole = role
-        }
+    if ESP_CONFIG.enabled then
+        addOutlines(character, color)
+    else
+        removeOutlines(character)
     end
-    
-    -- Update role text and colors
-    local esp = espCache[player.UserId]
-    esp.textLabel.Text = role
-    esp.textLabel.TextColor3 = color
-    esp.lastRole = role
 end
 
--- Function to remove ESP for a player
-local function removeESP(userId)
-    if espCache[userId] then
-        if espCache[userId].billboard then
-            espCache[userId].billboard:Destroy()
-        end
-        espCache[userId] = nil
+-- Function to remove all ESP for a player
+local function removeESP(player)
+    if player.Character then
+        removeOutlines(player.Character)
     end
 end
 
 -- Main ESP update loop
 local function espLoop()
-    while ESP_CONFIG.enabled do
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= Players.LocalPlayer then
-                pcall(function()
-                    updateESP(player)
-                end)
+    while true do
+        if ESP_CONFIG.enabled then
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= Players.LocalPlayer then
+                    pcall(function()
+                        updateESP(player)
+                    end)
+                end
             end
         end
         wait(ESP_CONFIG.updateRate)
@@ -125,13 +123,15 @@ end
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function(character)
         wait(0.1)
-        updateESP(player)
+        if ESP_CONFIG.enabled then
+            updateESP(player)
+        end
     end)
 end)
 
 -- Player removing connection
 Players.PlayerRemoving:Connect(function(player)
-    removeESP(player.UserId)
+    removeESP(player)
 end)
 
 -- Toggle ESP with 'E' key
@@ -140,19 +140,21 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.E then
         ESP_CONFIG.enabled = not ESP_CONFIG.enabled
         print("ESP " .. (ESP_CONFIG.enabled and "Enabled" or "Disabled"))
+        
+        -- Update all players when toggling
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= Players.LocalPlayer then
+                pcall(function()
+                    updateESP(player)
+                end)
+            end
+        end
     end
 end)
-
--- Update existing players
-for _, player in pairs(Players:GetPlayers()) do
-    if player ~= Players.LocalPlayer and player.Character then
-        wait(0.05)
-        updateESP(player)
-    end
-end
 
 -- Start ESP loop
 task.spawn(espLoop)
 
-print("Murder Mystery 2 ESP loaded! Press 'E' to toggle.")
+print("Murder Mystery 2 ESP loaded!")
+print("Press 'E' to toggle ESP")
 print("Murderer: RED | Sheriff: BLUE | Innocent: GREEN")
